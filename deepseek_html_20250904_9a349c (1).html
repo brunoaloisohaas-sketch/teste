@@ -326,19 +326,28 @@
       font-size: 12px;
       margin-left: 10px;
     }
-    
-    .loading {
-      display: inline-block;
-      width: 20px;
-      height: 20px;
-      border: 3px solid rgba(255,255,255,.3);
-      border-radius: 50%;
-      border-top-color: #fff;
-      animation: spin 1s ease-in-out infinite;
+
+    .nfe-info {
+      background-color: #f0f9ff;
+      border-left: 4px solid var(--lf-blue);
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 12px;
+      display: none;
     }
     
-    @keyframes spin {
-      to { transform: rotate(360deg); }
+    .nfe-info.visible {
+      display: block;
+    }
+    
+    .nfe-info p {
+      margin: 4px 0;
+      font-size: 14px;
+    }
+    
+    .nfe-info .label {
+      font-weight: 600;
+      color: var(--lf-blue);
     }
   </style>
 </head>
@@ -354,8 +363,8 @@
       </div>
 
       <div class="user-type-selector">
-        <button type="button" class="user-type-btn active" data-user-type="motorista">Motorista</button>
-        <button type="button" class="user-type-btn" data-user-type="administrador">Administrador</button>
+        <button type="button" class="user-type-btn active" data-user-type="driver">Motorista</button>
+        <button type="button" class="user-type-btn" data-user-type="admin">Administrador</button>
       </div>
 
       <form id="loginForm" class="login-form">
@@ -369,7 +378,7 @@
           <input type="password" id="loginPassword" required placeholder="Digite sua senha" />
         </label>
         
-        <button type="submit" class="btn-primary" id="loginButton">Entrar</button>
+        <button type="submit" class="btn-primary">Entrar</button>
       </form>
 
       <p class="muted" style="text-align: center; margin-top: 16px;">
@@ -395,7 +404,7 @@
     <div class="container">
       <!-- Navegação -->
       <nav class="tabs" aria-label="Navegação de abas" id="mainTabs">
-        <button class="tab-btn active" data-tab="dash" id="dashTab" style="display: none;">Dashboard</button>
+        <button class="tab-btn active" data-tab="dash">Dashboard</button>
         <button class="tab-btn" data-tab="check">Checklist</button>
         <button class="tab-btn" data-tab="nf">Cadastrar NF</button>
         <button class="tab-btn" data-tab="eta">ETA</button>
@@ -411,7 +420,6 @@
             <label>De: <input type="date" id="filtroInicio" /></label>
             <label>Até: <input type="date" id="filtroFim" /></label>
             <button class="btn-primary" onclick="exportNFs()">Exportar CSV</button>
-            <button class="btn-ghost" onclick="loadNfsFromServer()">Atualizar Dados</button>
           </div>
         </div>
         <div id="dashCards" class="grid grid-3"></div>
@@ -420,10 +428,12 @@
       <!-- CHECKLIST -->
       <section id="check" class="tab card" style="display:none;">
         <h2>✅ Checklist</h2>
-        <div id="checklistContainer" class="list">
-          <p class="muted">Carregando checklist...</p>
+        <div id="checklist" class="list">
+          <label class="check-item"><input type="checkbox" /> Pneus calibrados</label>
+          <label class="check-item"><input type="checkbox" /> Luzes funcionando</label>
+          <label class="check-item"><input type="checkbox" /> Lacres conferidos</label>
+          <label class="check-item"><input type="checkbox" /> Documentos em mãos</label>
         </div>
-        <button class="btn-primary" onclick="salvarChecklist()" style="margin-top: 16px;">Salvar Checklist</button>
       </section>
 
       <!-- CADASTRAR NF -->
@@ -455,6 +465,14 @@
           </div>
         </div>
         
+        <!-- Informações da NF-e detectada -->
+        <div id="nfeInfo" class="nfe-info">
+          <p><span class="label">NF-e detectada:</span> <span id="nfeNumber"></span></p>
+          <p><span class="label">Chave de acesso:</span> <span id="nfeKey"></span></p>
+          <p><span class="label">Data de emissão:</span> <span id="nfeDate"></span></p>
+          <p><span class="label">CNPJ Emitente:</span> <span id="nfeCNPJ"></span></p>
+        </div>
+        
         <div class="grid grid-2" style="margin-top:10px">
           <div class="card">
             <h3>Dados básicos</h3>
@@ -470,11 +488,15 @@
               <label>m³ <input id="nfM3" type="number" step="0.01" min="0" /></label>
               <label>Rota
                 <select id="nfRota">
-                  <option value="">Selecione uma rota</option>
+                  <option>Fortaleza</option>
+                  <option>Belém</option>
+                  <option>Manaus</option>
+                  <option>Boa Vista</option>
+                  <option>Outra</option>
                 </select>
               </label>
             </div>
-            <label>Responsável <input id="nfResp" value="" readonly /></label>
+            <label>Responsável <input id="nfResp" /></label>
             <label>Observações <textarea id="nfObs" rows="3"></textarea></label>
             <button class="btn-primary" id="btSalvarNF">Salvar NF</button>
           </div>
@@ -493,17 +515,11 @@
           </div>
         </div>
         <p id="etaOut" class="eta-out">—</p>
-        
-        <h3>ETAs Registrados</h3>
-        <div id="etaList" class="list"></div>
       </section>
 
       <!-- RESUMO -->
       <section id="sum" class="tab card" style="display:none;">
         <h2>🧾 Resumo</h2>
-        <div class="row">
-          <button class="btn-primary" onclick="atualizarResumo()">Atualizar</button>
-        </div>
         <div id="sumResumo"></div>
       </section>
 
@@ -516,6 +532,11 @@
             Rota
             <select id="adminFilterRota">
               <option value="">Todas</option>
+              <option>Fortaleza</option>
+              <option>Belém</option>
+              <option>Manaus</option>
+              <option>Boa Vista</option>
+              <option>Outra</option>
             </select>
           </label>
           
@@ -545,28 +566,23 @@
   <script>
     // ===== CONFIGURAÇÕES E VARIÁVEIS GLOBAIS =====
     const SUPABASE_URL = "https://vqefwcpbzuhcfkrzaxic.supabase.co";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxZWZ3Y3BienVoY2ZrcnpheGljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY5NDY5MjAsImV4cCI6MjA3MjUyMjkyMH0.wbnbfxZuR7bRahQfBpsDDErk8vAiWQOrtnzNmyR8prU";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhbmFzZSIsInJlZiI6InZxZWZ3Y3BienVoY2ZrcnpheGljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY5NDY5MjAsImV4cCI6MjA3MjUyMjkyMH0.wbnbfxZuR7bRahQfBpsDDErk8vAiWQOortnzNmyR8prU";
 
     // Chaves para localStorage
     const LS = { 
       nfs: 'lf_nfs', 
-      etas: 'lf_etas',
-      checklists: 'lf_checklists',
+      admin: 'lf_admin',
       user: 'lf_user',
       userType: 'lf_user_type',
-      pendingSync: 'lf_pending_sync',
-      rotas: 'lf_rotas'
+      pendingSync: 'lf_pending_sync'
     };
 
     // Variáveis globais
     let nfs = [];
-    let etas = [];
-    let checklists = [];
-    let rotas = [];
     let scannerActive = false;
     let videoStream = null;
     let scanningInterval = null;
-    let currentUserType = 'motorista';
+    let currentUserType = 'driver';
     let currentUser = '';
     let isOnline = false;
     let supabase = null;
@@ -589,7 +605,7 @@
     }
 
     function isAdmin() {
-      return currentUserType === 'administrador';
+      return currentUserType === 'admin';
     }
 
     function checkOnlineStatus() {
@@ -610,6 +626,76 @@
       return isOnline;
     }
 
+    // ===== PROCESSADOR DE CHAVE DE ACESSO NF-e =====
+    function processarChaveNFE(chave) {
+      // Verificar se é uma chave de acesso válida (44 dígitos)
+      if (!chave || chave.length !== 44 || !/^\d+$/.test(chave)) {
+        return null;
+      }
+      
+      try {
+        // Extrair informações da chave de acesso (formato padrão NF-e)
+        const uf = chave.substring(0, 2);
+        const anoMes = chave.substring(2, 6);
+        const cnpj = chave.substring(6, 20);
+        const modelo = chave.substring(20, 22);
+        const serie = chave.substring(22, 25);
+        const numeroNF = chave.substring(25, 34);
+        const codigoNumerico = chave.substring(34, 43);
+        const digitoVerificador = chave.substring(43, 44);
+        
+        // Mapeamento de UF (códigos IBGE)
+        const ufMap = {
+          '12': 'AC', '27': 'AL', '16': 'AP', '13': 'AM', '29': 'BA',
+          '23': 'CE', '53': 'DF', '32': 'ES', '52': 'GO', '21': 'MA',
+          '51': 'MT', '50': 'MS', '31': 'MG', '15': 'PA', '25': 'PB',
+          '41': 'PR', '26': 'PE', '22': 'PI', '24': 'RN', '43': 'RS',
+          '33': 'RJ', '11': 'RO', '14': 'RR', '42': 'SC', '35': 'SP',
+          '28': 'SE', '17': 'TO'
+        };
+        
+        return {
+          chave: chave,
+          uf: ufMap[uf] || uf,
+          ano: '20' + anoMes.substring(0, 2),
+          mes: anoMes.substring(2, 4),
+          cnpj: cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5'),
+          modelo: modelo,
+          serie: serie,
+          numero: numeroNF.replace(/^0+/, ''), // Remove zeros à esquerda
+          codigoNumerico: codigoNumerico,
+          digitoVerificador: digitoVerificador
+        };
+      } catch (error) {
+        console.error('Erro ao processar chave de acesso:', error);
+        return null;
+      }
+    }
+
+    // ===== EXIBIR INFORMAÇÕES DA NF-e =====
+    function exibirInfoNFE(dadosNFE) {
+      const nfeInfo = document.getElementById('nfeInfo');
+      document.getElementById('nfeNumber').textContent = dadosNFE.numero;
+      document.getElementById('nfeKey').textContent = dadosNFE.chave;
+      document.getElementById('nfeDate').textContent = `${dadosNFE.mes}/${dadosNFE.ano}`;
+      document.getElementById('nfeCNPJ').textContent = dadosNFE.cnpj;
+      nfeInfo.classList.add('visible');
+      
+      // Preencher automaticamente o campo de número da NF
+      document.getElementById('nfNumero').value = dadosNFE.numero;
+      
+      // Se a UF for conhecida, tentar preencher a rota automaticamente
+      if (dadosNFE.uf === 'AM') {
+        document.getElementById('nfRota').value = 'Manaus';
+      } else if (dadosNFE.uf === 'PA') {
+        document.getElementById('nfRota').value = 'Belém';
+      } else if (dadosNFE.uf === 'RR') {
+        document.getElementById('nfRota').value = 'Boa Vista';
+      } else if (dadosNFE.uf === 'CE') {
+        document.getElementById('nfRota').value = 'Fortaleza';
+      }
+    }
+
     // ===== SISTEMA DE LOGIN =====
     async function setupLogin() {
       // Verificar status de conexão
@@ -620,10 +706,22 @@
       // Tentar inicializar Supabase apenas se estivermos online
       if (isOnline) {
         try {
-          // Carregar Supabase dinamicamente
-          const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
-          supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+          console.log("Tentando conectar com Supabase...");
+          const supabaseModule = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');
+          supabase = supabaseModule.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
           console.log("Supabase inicializado com sucesso");
+  
+          // Teste a conexão (corrigido)
+          const { count, error } = await supabase
+            .from('usuarios')
+            .select('*', { count: 'exact', head: true });
+            
+          if (error) {
+            console.error("Erro ao testar conexão:", error);
+            isOnline = false;
+          } else {
+            console.log("Conexão testada com sucesso. Total de usuários:", count);
+          }
         } catch (error) {
           console.error("Erro ao carregar Supabase:", error);
           isOnline = false;
@@ -658,23 +756,19 @@
         const senha = document.getElementById('loginPassword').value.trim();
         const userType = document.querySelector('.user-type-btn.active').dataset.userType;
         
-        const loginButton = document.getElementById('loginButton');
-        const originalText = loginButton.textContent;
-        loginButton.innerHTML = '<div class="loading"></div>';
-        loginButton.disabled = true;
-        
         console.log("Tentando login com:", { usuario, senha, userType });
 
         // Se estivermos online, tentar autenticar com Supabase
         if (isOnline && supabase) {
           try {
-            // Consulta corrigida para a estrutura da sua tabela
+            // CONSULTA CORRIGIDA - use 'usuario' em vez de 'e-mail'
             const { data, error } = await supabase
               .from('usuarios')
               .select('*')
-              .eq('nome', usuario)  // Ajustado para o campo 'nome' conforme seu diagrama
+              .eq('usuario', usuario) // ou 'email' dependendo da sua tabela
               .eq('senha', senha)
               .eq('tipo', userType)
+              .eq('ativo', true)
               .maybeSingle();
 
             console.log("Resultado Supabase:", { data, error });
@@ -682,19 +776,17 @@
             if (error) {
               console.error('Erro do Supabase:', error);
               // Fallback para login local em caso de erro
-              useLocalLogin(usuario, senha, userType, loginButton, originalText);
+              useLocalLogin(usuario, senha, userType);
               return;
             }
 
             if (!data) {
-              alert('Usuário, senha ou tipo incorretos.');
-              loginButton.textContent = originalText;
-              loginButton.disabled = false;
+              alert('Usuário, senha ou tipo incorretos, ou usuário inativo.');
               return;
             }
 
             // Login bem-sucedido
-            currentUser = data.nome;
+            currentUser = data.usuario;
             currentUserType = data.tipo;
 
             localStorage.setItem(LS.user, currentUser);
@@ -705,20 +797,20 @@
           } catch (error) {
             console.error('Erro na autenticação:', error);
             // Fallback para login local em caso de erro
-            useLocalLogin(usuario, senha, userType, loginButton, originalText);
+            useLocalLogin(usuario, senha, userType);
             return;
           }
         }
         
         // Se offline ou Supabase não disponível, usar login local
-        useLocalLogin(usuario, senha, userType, loginButton, originalText);
+        useLocalLogin(usuario, senha, userType);
       });
     }
 
     // Login local (fallback)
-    function useLocalLogin(usuario, senha, userType, loginButton, originalText) {
-      if ((usuario === 'motorista' && senha === 'motorista' && userType === 'motorista') || 
-          (usuario === 'admin' && senha === 'admin' && userType === 'administrador')) {
+    function useLocalLogin(usuario, senha, userType) {
+      if ((usuario === 'motorista' && senha === 'motorista' && userType === 'driver') || 
+          (usuario === 'admin' && senha === 'admin' && userType === 'admin')) {
         currentUser = usuario;
         currentUserType = userType;
         
@@ -728,8 +820,6 @@
         showApp();
       } else {
         alert('Credenciais inválidas. Use "motorista"/"motorista" para motorista ou "admin"/"admin" para administrador.');
-        loginButton.textContent = originalText;
-        loginButton.disabled = false;
       }
     }
 
@@ -740,15 +830,15 @@
       
       // Atualizar interface baseada no tipo de usuário
       document.getElementById('userBadge').textContent = isAdmin() ? 'Administrador' : 'Motorista';
-      document.getElementById('nfResp').value = currentUser;
       
       // Controle de abas por tipo de usuário
       const adminTab = document.getElementById('adminTab');
-      const dashTab = document.getElementById('dashTab');
+      const dashTab = document.querySelector('.tab-btn[data-tab="dash"]');
       
       if (isAdmin()) {
         adminTab.style.display = 'block';
         dashTab.style.display = 'block';
+        renderAdminPanel();
       } else {
         // Para motoristas, esconder dashboard e admin
         adminTab.style.display = 'none';
@@ -795,10 +885,8 @@
           
           // Atualizar conteúdo específico da aba
           if (tab === 'dash') renderDashboardCards();
-          if (tab === 'check') carregarChecklist();
           if (tab === 'sum') atualizarResumo();
           if (tab === 'admin') renderAdminPanel();
-          if (tab === 'eta') carregarETAs();
         });
       });
     }
@@ -858,63 +946,21 @@
       }
     }
 
-    // ===== CARREGAR ROTAS =====
-    async function carregarRotas() {
-      // Carregar rotas do localStorage primeiro
-      rotas = loadLS(LS.rotas, []);
-      
-      const selectRota = document.getElementById('nfRota');
-      const selectFiltroRota = document.getElementById('adminFilterRota');
-      
-      // Limpar selects
-      selectRota.innerHTML = '<option value="">Selecione uma rota</option>';
-      selectFiltroRota.innerHTML = '<option value="">Todas</option>';
-      
-      // Se estiver online, tentar carregar do Supabase
-      if (isOnline && supabase) {
-        try {
-          const { data, error } = await supabase
-            .from('rotas')
-            .select('*')
-            .order('nome');
-            
-          if (!error && data) {
-            rotas = data;
-            saveLS(LS.rotas, rotas);
-          }
-        } catch (error) {
-          console.error('Erro ao carregar rotas:', error);
-        }
-      }
-      
-      // Preencher selects com as rotas
-      rotas.forEach(rota => {
-        const option = document.createElement('option');
-        option.value = rota.nome;
-        option.textContent = rota.nome;
-        
-        selectRota.appendChild(option);
-        
-        const optionFiltro = option.cloneNode(true);
-        selectFiltroRota.appendChild(optionFiltro);
-      });
-    }
-
     // ===== CADASTRO DE NF =====
-    async function salvarNF() {
+    function salvarNF() {
       const nf = {
         numero: document.getElementById("nfNumero").value.trim(),
         datahora: document.getElementById("nfDataHora").value,
-        remetente: document.getElementById("nfRem").value.trim(),
-        destinatario: document.getElementById("nfDest").value.trim(),
+        rem: document.getElementById("nfRem").value.trim(),
+        dest: document.getElementById("nfDest").value.trim(),
         volumes: Number(document.getElementById("nfVolumes").value||0),
         peso: Number(document.getElementById("nfPeso").value||0),
         m3: Number(document.getElementById("nfM3").value||0),
         rota: document.getElementById("nfRota").value,
-        responsavel: document.getElementById("nfResp").value.trim(),
-        observacoes: document.getElementById("nfObs").value.trim(),
+        resp: document.getElementById("nfResp").value.trim(),
+        obs: document.getElementById("nfObs").value.trim(),
         usuario: currentUser,
-        data_registro: new Date().toISOString()
+        dataRegistro: new Date().toISOString()
       };
       
       if(!nf.numero){ 
@@ -927,31 +973,11 @@
       
       // Se estiver online, tentar sincronizar com o servidor
       if (isOnline && supabase) {
-        try {
-          const { data, error } = await supabase
-            .from('notas_fiscais')
-            .insert([nf]);
-            
-          if (error) {
-            console.error('Erro ao salvar NF no Supabase:', error);
-            // Salvar para sincronização posterior
-            const pendingSync = loadLS(LS.pendingSync, []);
-            pendingSync.push({ tipo: 'nf', dados: nf });
-            saveLS(LS.pendingSync, pendingSync);
-          } else {
-            console.log('NF salva no Supabase:', data);
-          }
-        } catch (error) {
-          console.error('Erro ao salvar NF:', error);
-          // Salvar para sincronização posterior
-          const pendingSync = loadLS(LS.pendingSync, []);
-          pendingSync.push({ tipo: 'nf', dados: nf });
-          saveLS(LS.pendingSync, pendingSync);
-        }
+        syncNFWithServer(nf);
       } else {
         // Se offline, armazenar para sincronização posterior
         const pendingSync = loadLS(LS.pendingSync, []);
-        pendingSync.push({ tipo: 'nf', dados: nf });
+        pendingSync.push(nf);
         saveLS(LS.pendingSync, pendingSync);
       }
       
@@ -965,10 +991,43 @@
       alert("NF salva!");
       
       // Limpar campos
-      ["nfNumero","nfDataHora","nfRem","nfDest","nfVolumes","nfPeso","nfM3","nfObs"].forEach(id=>{
+      ["nfNumero","nfDataHora","nfRem","nfDest","nfVolumes","nfPeso","nfM3","nfResp","nfObs"].forEach(id=>{
         const el = document.getElementById(id); 
         if (el) el.value = "";
       });
+      
+      // Esconder informações da NF-e
+      document.getElementById('nfeInfo').classList.remove('visible');
+    }
+
+    // Sincronizar NF com servidor
+    async function syncNFWithServer(nf) {
+      if (!supabase) return false;
+      
+      try {
+        const { data, error } = await supabase
+          .from('notas_fiscais')
+          .insert([nf]);
+          
+        if (error) {
+          console.error('Erro ao sincronizar NF:', error);
+          // Salvar para tentar novamente depois
+          const pendingSync = loadLS(LS.pendingSync, []);
+          pendingSync.push(nf);
+          saveLS(LS.pendingSync, pendingSync);
+          return false;
+        }
+        
+        console.log('NF sincronizada com sucesso:', data);
+        return true;
+      } catch (error) {
+        console.error('Erro ao sincronizar NF:', error);
+        // Salvar para tentar novamente depois
+        const pendingSync = loadLS(LS.pendingSync, []);
+        pendingSync.push(nf);
+        saveLS(LS.pendingSync, pendingSync);
+        return false;
+      }
     }
 
     // ===== ETA =====
@@ -987,7 +1046,7 @@
       document.getElementById("etaOut").textContent = chegadaStr;
     }
 
-    async function salvarETA() {
+    function salvarETA() {
       const partida = document.getElementById("etaPartida").value;
       const minutos = document.getElementById("etaMin").value;
       const chegada = document.getElementById("etaOut").textContent;
@@ -997,158 +1056,12 @@
         return; 
       }
       
-      const eta = { 
-        partida, 
-        minutos, 
-        chegada, 
-        usuario: currentUser, 
-        data: new Date().toISOString() 
-      };
-      
+      const eta = { partida, minutos, chegada, usuario: currentUser, data: new Date().toISOString() };
+      const etas = loadLS('lf_etas', []);
       etas.unshift(eta);
-      saveLS(LS.etas, etas);
-      
-      // Se estiver online, tentar sincronizar com o servidor
-      if (isOnline && supabase) {
-        try {
-          const { data, error } = await supabase
-            .from('etas')
-            .insert([eta]);
-            
-          if (error) {
-            console.error('Erro ao salvar ETA no Supabase:', error);
-            // Salvar para sincronização posterior
-            const pendingSync = loadLS(LS.pendingSync, []);
-            pendingSync.push({ tipo: 'eta', dados: eta });
-            saveLS(LS.pendingSync, pendingSync);
-          } else {
-            console.log('ETA salvo no Supabase:', data);
-          }
-        } catch (error) {
-          console.error('Erro ao salvar ETA:', error);
-          // Salvar para sincronização posterior
-          const pendingSync = loadLS(LS.pendingSync, []);
-          pendingSync.push({ tipo: 'eta', dados: eta });
-          saveLS(LS.pendingSync, pendingSync);
-        }
-      } else {
-        // Se offline, armazenar para sincronização posterior
-        const pendingSync = loadLS(LS.pendingSync, []);
-        pendingSync.push({ tipo: 'eta', dados: eta });
-        saveLS(LS.pendingSync, pendingSync);
-      }
+      saveLS('lf_etas', etas);
       
       alert("ETA salvo!");
-      carregarETAs();
-    }
-
-    function carregarETAs() {
-      const container = document.getElementById("etaList");
-      if (!container) return;
-      
-      if (!etas || !etas.length) {
-        container.innerHTML = "<div class='empty'>Nenhum ETA registrado ainda.</div>";
-        return;
-      }
-      
-      let html = '';
-      etas.slice(0, 10).forEach(eta => {
-        html += `
-          <div class="card">
-            <strong>${eta.usuario}</strong>: ${eta.chegada}
-            <div class="muted">Partida: ${new Date(eta.partida).toLocaleString('pt-BR')}</div>
-          </div>
-        `;
-      });
-      
-      container.innerHTML = html;
-    }
-
-    // ===== CHECKLIST =====
-    async function carregarChecklist() {
-      const container = document.getElementById("checklistContainer");
-      if (!container) return;
-      
-      container.innerHTML = "<p class='muted'>Carregando checklist...</p>";
-      
-      // Carregar checklist do localStorage primeiro
-      checklists = loadLS(LS.checklists, []);
-      
-      // Se estiver online, tentar carregar do Supabase
-      if (isOnline && supabase) {
-        try {
-          const { data, error } = await supabase
-            .from('listas_de_verificacao')
-            .select('*')
-            .order('ordem');
-            
-          if (!error && data && data.length > 0) {
-            checklists = data;
-            saveLS(LS.checklists, checklists);
-          }
-        } catch (error) {
-          console.error('Erro ao carregar checklist:', error);
-        }
-      }
-      
-      // Se não houver checklists, usar um padrão
-      if (checklists.length === 0) {
-        checklists = [
-          { id: 1, item: "Pneus calibrados", ordem: 1 },
-          { id: 2, item: "Luzes funcionando", ordem: 2 },
-          { id: 3, item: "Lacres conferidos", ordem: 3 },
-          { id: 4, item: "Documentos em mãos", ordem: 4 }
-        ];
-        saveLS(LS.checklists, checklists);
-      }
-      
-      // Renderizar checklist
-      let html = '';
-      checklists.forEach(item => {
-        html += `
-          <label class="check-item">
-            <input type="checkbox" id="check-${item.id}" />
-            ${item.item}
-          </label>
-        `;
-      });
-      
-      container.innerHTML = html;
-    }
-
-    async function salvarChecklist() {
-      const checks = [];
-      checklists.forEach(item => {
-        const checked = document.getElementById(`check-${item.id}`).checked;
-        checks.push({
-          item: item.item,
-          verificado: checked,
-          usuario: currentUser,
-          data: new Date().toISOString()
-        });
-      });
-      
-      // Se estiver online, tentar sincronizar com o servidor
-      if (isOnline && supabase) {
-        try {
-          const { data, error } = await supabase
-            .from('checklists_realizados')
-            .insert(checks);
-            
-          if (error) {
-            console.error('Erro ao salvar checklist no Supabase:', error);
-            alert('Checklist salvo localmente. Erro ao sincronizar com o servidor.');
-          } else {
-            console.log('Checklist salvo no Supabase:', data);
-            alert('Checklist salvo e sincronizado!');
-          }
-        } catch (error) {
-          console.error('Erro ao salvar checklist:', error);
-          alert('Checklist salvo localmente. Erro ao sincronizar com o servidor.');
-        }
-      } else {
-        alert('Checklist salvo localmente. Será sincronizado quando online.');
-      }
     }
 
     // ===== RESUMO =====
@@ -1200,6 +1113,10 @@
 
     // ===== SCANNER =====
     async function iniciarScanner() {
+      // Esconder informações anteriores
+      document.getElementById('nfeInfo').classList.remove('visible');
+      
+      // Verificar suporte a BarcodeDetector
       if (!('BarcodeDetector' in window)) {
         alert("Seu navegador não suporta leitura de códigos de barras. Use um navegador moderno como Chrome ou Edge.");
         return;
@@ -1222,7 +1139,9 @@
         scannerActive = true;
         
         // Iniciar detecção de código de barras
-        const barcodeDetector = new BarcodeDetector({ formats: ['qr_code', 'ean_13', 'code_128'] });
+        // Tentar usar datamatrix se disponível
+        const formatos = ['qr_code', 'ean_13', 'code_128', 'data_matrix'];
+        const barcodeDetector = new BarcodeDetector({ formats });
         
         scanningInterval = setInterval(async () => {
           if (!scannerActive) return;
@@ -1231,7 +1150,20 @@
             const barcodes = await barcodeDetector.detect(video);
             if (barcodes.length > 0) {
               const barcode = barcodes[0];
-              document.getElementById("nfNumero").value = barcode.rawValue;
+              const rawValue = barcode.rawValue;
+              
+              // Verificar se é uma chave de acesso de NF-e (44 dígitos)
+              const dadosNFE = processarChaveNFE(rawValue);
+              
+              if (dadosNFE) {
+                // É uma NF-e - exibir informações adicionais
+                document.getElementById("nfNumero").value = dadosNFE.numero;
+                exibirInfoNFE(dadosNFE);
+              } else {
+                // É um código de barras comum
+                document.getElementById("nfNumero").value = rawValue;
+              }
+              
               pararScanner();
             }
           } catch (err) {
@@ -1283,7 +1215,7 @@
         
         // Filtrar por data
         if (dataInicio || dataFim) {
-          const dataNF = new Date(nf.data_registro);
+          const dataNF = new Date(nf.dataRegistro);
           const inicio = dataInicio ? new Date(dataInicio) : null;
           const fim = dataFim ? new Date(dataFim + 'T23:59:59') : null;
           
@@ -1307,8 +1239,8 @@
         html += `<tr>
           <td>${nf.numero}</td>
           <td>${new Date(nf.datahora).toLocaleString('pt-BR')}</td>
-          <td>${nf.remetente}</td>
-          <td>${nf.destinatario}</td>
+          <td>${nf.rem}</td>
+          <td>${nf.dest}</td>
           <td>${nf.volumes}</td>
           <td>${nf.peso} kg</td>
           <td>${nf.rota}</td>
@@ -1338,41 +1270,20 @@
         return;
       }
       
-      const syncButton = document.getElementById('syncButton');
-      const originalText = syncButton.textContent;
-      syncButton.innerHTML = '<div class="loading"></div> Sincronizando...';
-      syncButton.disabled = true;
-      
-      // Sincronizar itens pendentes
+      // Sincronizar NFs pendentes
       const pendingSync = loadLS(LS.pendingSync, []);
       const successfulSyncs = [];
       
       for (let i = 0; i < pendingSync.length; i++) {
-        const item = pendingSync[i];
-        let success = false;
+        const nf = pendingSync[i];
+        const success = await syncNFWithServer(nf);
         
-        try {
-          if (item.tipo === 'nf') {
-            const { error } = await supabase
-              .from('notas_fiscais')
-              .insert([item.dados]);
-            success = !error;
-          } else if (item.tipo === 'eta') {
-            const { error } = await supabase
-              .from('etas')
-              .insert([item.dados]);
-            success = !error;
-          }
-          
-          if (success) {
-            successfulSyncs.push(i);
-          }
-        } catch (error) {
-          console.error('Erro na sincronização:', error);
+        if (success) {
+          successfulSyncs.push(i);
         }
       }
       
-      // Remover os itens que foram sincronizados com sucesso
+      // Remover as NFs que foram sincronizadas com sucesso
       if (successfulSyncs.length > 0) {
         const newPendingSync = pendingSync.filter((_, index) => !successfulSyncs.includes(index));
         saveLS(LS.pendingSync, newPendingSync);
@@ -1380,13 +1291,8 @@
       
       // Recarregar dados do servidor
       await loadNfsFromServer();
-      await carregarRotas();
-      await carregarChecklist();
       
-      syncButton.textContent = originalText;
-      syncButton.disabled = false;
-      
-      alert(`Sincronização concluída. ${successfulSyncs.length} itens sincronizados.`);
+      alert(`Sincronização concluída. ${successfulSyncs.length} NFs sincronizadas.`);
     }
 
     async function loadNfsFromServer() {
@@ -1396,7 +1302,7 @@
         const { data, error } = await supabase
           .from('notas_fiscais')
           .select('*')
-          .order('data_registro', { ascending: false });
+          .order('dataRegistro', { ascending: false });
           
         if (error) {
           console.error('Erro ao carregar NFs do servidor:', error);
@@ -1425,7 +1331,7 @@
       let csv = "Número,Data/Hora,Remetente,Destinatário,Volumes,Peso (kg),m³,Rota,Responsável,Observações\n";
       
       nfs.forEach(nf => {
-        csv += `"${nf.numero}","${new Date(nf.datahora).toLocaleString('pt-BR')}","${nf.remetente}","${nf.destinatario}",${nf.volumes},${nf.peso},${nf.m3},"${nf.rota}","${nf.responsavel}","${nf.observacoes}"\n`;
+        csv += `"${nf.numero}","${new Date(nf.datahora).toLocaleString('pt-BR')}","${nf.rem}","${nf.dest}",${nf.volumes},${nf.peso},${nf.m3},"${nf.rota}","${nf.resp}","${nf.obs}"\n`;
       });
       
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -1443,7 +1349,6 @@
     function initApp() {
       // Carregar dados
       nfs = loadLS(LS.nfs, []);
-      etas = loadLS(LS.etas, []);
       
       // Configurar navegação
       setupNavigation();
@@ -1461,13 +1366,9 @@
       document.getElementById("nfDataHora").value = nowStr;
       document.getElementById("etaPartida").value = nowStr;
       
-      // Carregar rotas
-      carregarRotas();
-      
       // Inicializar visualizações
       renderDashboardCards();
       atualizarResumo();
-      carregarETAs();
       
       // Se estiver online, tentar carregar dados do servidor
       if (isOnline && supabase) {
@@ -1478,5 +1379,62 @@
     // Inicializar quando o DOM estiver pronto
     document.addEventListener('DOMContentLoaded', setupLogin);
   </script>
+
+<script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+<script>
+async function iniciarScanner() {
+  document.getElementById('nfeInfo').classList.remove('visible');
+
+  if ('BarcodeDetector' in window) {
+    try {
+      const video = document.getElementById("scanner-video");
+      const container = document.getElementById("scanner-container");
+
+      videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      video.srcObject = videoStream;
+      container.classList.add("active");
+      scannerActive = true;
+
+      const detector = new BarcodeDetector({ formats: ['qr_code','code_128','ean_13','data_matrix'] });
+      scanningInterval = setInterval(async () => {
+        const codes = await detector.detect(video);
+        if (codes.length > 0) {
+          processarCodigo(codes[0].rawValue);
+        }
+      }, 500);
+    } catch (e) {
+      alert("Erro ao acessar câmera: " + e.message);
+    }
+  } else {
+    const container = document.getElementById("scanner-container");
+    container.classList.add("active");
+
+    Quagga.init({
+      inputStream: { type : "LiveStream", target: container },
+      decoder : { readers : ["code_128_reader","ean_reader","ean_13_reader","upc_reader"] }
+    }, err => {
+      if (err) { console.error(err); return }
+      Quagga.start();
+    });
+
+    Quagga.onDetected(res => {
+      const code = res.codeResult.code;
+      if (code) processarCodigo(code);
+    });
+  }
+}
+
+function processarCodigo(rawValue){
+  const dadosNFE = processarChaveNFE(rawValue);
+  if (dadosNFE) {
+    document.getElementById("nfNumero").value = dadosNFE.numero;
+    exibirInfoNFE(dadosNFE);
+  } else {
+    document.getElementById("nfNumero").value = rawValue;
+  }
+  pararScanner();
+}
+</script>
 </body>
+
 </html>
